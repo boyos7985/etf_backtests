@@ -156,12 +156,14 @@ def RSi(df,PxChangeColumn,Asset_name,window):
     
     return df
 
-def z_score(data):
+def z_score(data,days):
 # gets the zscore, so if you are 190cm high, the zscore might be 2.5 ie you are 2.5std away from the mean height
 # can use:
 # rolled.plot()
 # rolled.hist(bins=20)
-    return (data[-1]-data.mean())/data.std() 
+    rolling_mean=data.rolling(window=days).mean()
+    rolling_std=data.rolling(window=days).std()
+    return (data-rolling_mean)/rolling_std
 
 def Realized_vol(data,period):
 #     mu=avg
