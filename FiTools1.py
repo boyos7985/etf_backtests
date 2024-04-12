@@ -62,9 +62,13 @@ def turningLong_or_Flat_Asset(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on
     df.loc[(df[Bool_asset_on].shift(1) == 0) & (consecutive_days== 1),Bool_asset_on] = 1
 
     # For Case 2, use rolling to count '1's over the last X days for both conditions
-    rolling_is_above_MA = is_above_MA.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
-    rolling_consecutive_days = consecutive_days.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    # rolling_is_above_MA = is_above_MA.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    # rolling_consecutive_days = consecutive_days.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
 
+    rolling_is_above_MA = is_above_MA.rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    rolling_consecutive_days = consecutive_days.rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+
+    
     # Case 2: Continuation - Held before and conditions are still met
     # This checks if either condition has been met at least once in the last 5 days
     continuation_condition = ((rolling_is_above_MA >= 1) | (rolling_consecutive_days >= 1)).astype(int)
