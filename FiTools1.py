@@ -36,6 +36,72 @@ def GetYearlyRate(FV,StartDate,EndDate):
 
 
 
+def turningLong_or_Flat_AssetExit(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on,consDays,DaysExit=None):
+    # function that makes you hold asset  by implementing booleans
+    # working for S&P, asset 2 and 3
+    if DaysExit is None:
+        DaysExit=consDays
+    
+    required_columns=[Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on]
+    for column in required_columns:
+        if column not in df.columns:
+            raise ValueError(f'Column {column} not found in DataFRame.')
+    if not isinstance(consDays, int) or consDays <= 0:
+        raise ValueError("consDays must be a positive integer.")
+    
+    # checking if prices above MA
+    is_above_MA=0
+    is_above_MA=df[Asset_Base_0]>df[MA_200_Asset_Base_0]
+    is_above_MA=is_above_MA.astype(int)
+    consecutive_days=0
+    consecutive_days=is_above_MA.astype(int).rolling(window=consDays).sum()== consDays
+    consecutive_days=consecutive_days.astype(int)
+
+    is_below_MA=0
+    is_below_MA=df[Asset_Base_0]<df[MA_200_Asset_Base_0]
+    is_below_MA=is_below_MA.astype(int)
+    consecutive_daysBelow=0
+    consecutive_daysBelow=is_below_MA.astype(int).rolling(window=DaysExit).sum()== DaysExit
+    consecutive_daysBelow=consecutive_daysBelow.astype(int)
+    
+    df[Bool_asset_on]=0
+
+    # Case 1: Activate Bool_asset_on if not previously held and conditions are met
+    df.loc[(df[Bool_asset_on].shift(1) == 0) & (consecutive_days== 1),Bool_asset_on] = 1
+
+    # For Case 2, use rolling to count '1's over the last X days for both conditions
+    rolling_is_above_MA = is_above_MA.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    rolling_consecutive_days = consecutive_days.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+
+
+    
+    # Case 2: Continuation - Held before and conditions are still met
+    # This checks if either condition has been met at least once in the last 5 days
+    continuation_condition = ((rolling_is_above_MA >= 1) | (rolling_consecutive_days >= 1)).astype(int)
+
+    # Apply continuation condition where 'Bool Tsylev3 On' was previously 1
+    # This checks if either condition has been met at least once in the last 5 days
+    # df.loc[df['Bool Tsylev3 On'].shift(1) == 1, 'Bool Tsylev3 On'] = continuation_condition
+
+    
+    
+    for i in range(1,len(df)-1):
+        if (df[Bool_asset_on].iloc[i-1]==1) & (continuation_condition.iloc[i]==1):
+            df[Bool_asset_on].iloc[i]=1
+    
+    for i in range(1,len(df)-1):
+        if (df[Bool_asset_on].iloc[i-1]==1) & (consecutive_daysBelow.iloc[i]==1):
+            df[Bool_asset_on].iloc[i]=0
+    
+    # rolling_is_above_MA.to_csv('rollAbovMA.csv')
+    # rolling_consecutive_days.to_csv('roll consDays.csv')
+    df['rolling_is_above_MA_'+Asset_Base_0]=rolling_is_above_MA
+    df['rolling_consecutive_days'+Asset_Base_0]=rolling_consecutive_days
+    df['continuation_condition'+Asset_Base_0]=continuation_condition
+    # test booleans                   
+    
+    return df
+
 def turningLong_or_Flat_Asset(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on,consDays,DaysExit=None):
     # function that makes you hold asset  by implementing booleans
     # working for S&P, asset 2 and 3
@@ -62,11 +128,9 @@ def turningLong_or_Flat_Asset(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on
     df.loc[(df[Bool_asset_on].shift(1) == 0) & (consecutive_days== 1),Bool_asset_on] = 1
 
     # For Case 2, use rolling to count '1's over the last X days for both conditions
-    # rolling_is_above_MA = is_above_MA.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
-    # rolling_consecutive_days = consecutive_days.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    rolling_is_above_MA = is_above_MA.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
+    rolling_consecutive_days = consecutive_days.shift().rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
 
-    rolling_is_above_MA = is_above_MA.rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
-    rolling_consecutive_days = consecutive_days.rolling(window=DaysExit).apply(lambda x: (x >= 1).sum(), raw=True)
 
     
     # Case 2: Continuation - Held before and conditions are still met
@@ -88,6 +152,7 @@ def turningLong_or_Flat_Asset(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on
     # test booleans                   
     
     return df
+
 
 
 def turningLong_or_Flat_Asset_conditional_2_refAsset(df, Asset_Base_0,MA_200_Asset_Base_0,Bool_asset_on,Bool_asset_ref,consDays):
